@@ -66,8 +66,7 @@ export function getVehicleRates(seats?: number, vehicleName?: string) {
  * - Monetary values stored and rounded in integer paise for precision.
  */
 export function calculateFare({
-  rideType = "Private Pool",
-  seats,
+  seats,  
   vehicleName,
   routeDistanceMeters,
   pickupDetourMeters = 0,
@@ -75,45 +74,45 @@ export function calculateFare({
   baseRatePerKm,
   detourRatePerKm,
   includePlatformFee,
-}: FareCalculationInput): FareDetails {
-  const mainDistanceKm = routeDistanceMeters / 1000;
-  const pickupDetourKm = pickupDetourMeters / 1000;
-  const dropDetourKm = dropDetourMeters / 1000;
-  const totalDetourKm = pickupDetourKm + dropDetourKm;
+  }: FareCalculationInput): FareDetails {
+    const mainDistanceKm = routeDistanceMeters / 1000;
+    const pickupDetourKm = pickupDetourMeters / 1000;
+    const dropDetourKm = dropDetourMeters / 1000;
+    const totalDetourKm = pickupDetourKm + dropDetourKm;
 
-  const rates = getVehicleRates(seats, vehicleName);
-  const baseRate = baseRatePerKm ?? rates.baseRatePerKm;
-  const detourRate = detourRatePerKm ?? rates.detourRatePerKm;
-  const poolingIncentive = 0;
-  const feeRate = includePlatformFee === false ? 0 : 0.03;
+    const rates = getVehicleRates(seats, vehicleName);
+    const baseRate = baseRatePerKm ?? rates.baseRatePerKm;
+    const detourRate = detourRatePerKm ?? rates.detourRatePerKm;
+    const poolingIncentive = 0;
+    const feeRate = includePlatformFee === false ? 0 : 0.03;
 
-  const mainRouteFare = Math.round(mainDistanceKm * baseRate * 100) / 100;
-  const pickupDetourFare = Math.round(pickupDetourKm * detourRate * 100) / 100;
-  const dropDetourFare = Math.round(dropDetourKm * detourRate * 100) / 100;
-  const detourFare = Math.round((pickupDetourFare + dropDetourFare) * 100) / 100;
+    const mainRouteFare = Math.round(mainDistanceKm * baseRate * 100) / 100;
+    const pickupDetourFare = Math.round(pickupDetourKm * detourRate * 100) / 100;
+    const dropDetourFare = Math.round(dropDetourKm * detourRate * 100) / 100;
+    const detourFare = Math.round((pickupDetourFare + dropDetourFare) * 100) / 100;
 
-  const subtotal = Math.round((mainRouteFare + detourFare + poolingIncentive) * 100) / 100;
-  const platformFee = Math.round(subtotal * feeRate * 100) / 100;
-  const passengerTotal = Math.round((subtotal + platformFee) * 100) / 100;
-  const passengerTotalPaise = Math.round(passengerTotal * 100);
-  const driverEarning = subtotal;
+    const subtotal = Math.round((mainRouteFare + detourFare + poolingIncentive) * 100) / 100;
+    const platformFee = Math.round(subtotal * feeRate * 100) / 100;
+    const passengerTotal = Math.round((subtotal + platformFee) * 100) / 100;
+    const passengerTotalPaise = Math.round(passengerTotal * 100);
+    const driverEarning = subtotal;
 
-  return {
-    mainRouteFare,
-    pickupDetourFare,
-    dropDetourFare,
-    detourFare,
-    poolingIncentive,
-    subtotal,
-    platformFee,
-    passengerTotal,
-    passengerTotalPaise,
-    driverEarning,
-    baseRatePerKm: baseRate,
-    detourRatePerKm: detourRate,
-    routeDistanceKm: mainDistanceKm,
-    pickupDetourKm,
-    dropDetourKm,
-    totalDetourKm,
-  };
-}
+    return {
+      mainRouteFare,
+      pickupDetourFare,
+      dropDetourFare,
+      detourFare,
+      poolingIncentive,
+      subtotal,
+      platformFee,
+      passengerTotal,
+      passengerTotalPaise,
+      driverEarning,
+      baseRatePerKm: baseRate,
+      detourRatePerKm: detourRate,
+      routeDistanceKm: mainDistanceKm,
+      pickupDetourKm,
+      dropDetourKm,
+      totalDetourKm,
+    };
+  }
