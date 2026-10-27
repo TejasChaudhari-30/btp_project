@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { haversineDistance } from "@/lib/geo";
 
 interface RideTelemetry {
   heading: number | null;
@@ -97,6 +98,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         status: true,
         currentLat: true,
         currentLon: true,
+        destLat: true,
+        destLon: true,
       },
     });
 
@@ -188,6 +191,46 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         locationUpdatedAt: now,
       },
     });
+
+    // Automatically detect when ride reaches destination for any confirmed passenger
+    try {
+      const activeBookings = await prisma.booking.findMany({
+        where: {
+          rideId: params.id,
+          status: "CONFIRMED",
+        },
+        select: {
+          id: true,
+          seats: true,
+          dropLat: true,
+          dropLon: true,
+        },
+      });
+
+      const arrivalRadiusKm = 0.25; // 250m arrival proximity threshold
+      for (const b of activeBookings) {
+        const destLat = typeof b.dropLat === "number" ? b.dropLat : ride.destLat;
+        const destLon = typeof b.dropLon === "number" ? b.dropLon : ride.destLon;
+        if (typeof destLat === "number" && typeof destLon === "number") {
+          const distKm = haversineDistance(latNum, lonNum, destLat, destLon);
+          if (distKm <= arrivalRadiusKm) {
+            // Passenger reached destination: end ride for this passenger & restore available seats
+            await prisma.$transaction([
+              prisma.booking.update({
+                where: { id: b.id },
+                data: { status: "COMPLETED" },
+              }),
+              prisma.ride.update({
+                where: { id: params.id },
+                data: { seats: { increment: b.seats } },
+              }),
+            ]);
+          }
+        }
+      }
+    } catch (arrivalErr) {
+      console.error("Destination arrival check failed:", arrivalErr);
+    }
 
     return NextResponse.json({
       success: true,

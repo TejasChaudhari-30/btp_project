@@ -622,7 +622,7 @@ export async function verifyAndConfirmPayment({
     await tx.booking.update({
       where: { id: bookingId },
       data: {
-        status: "CONFIRMED",
+        status: payment.booking.status === "COMPLETED" ? "COMPLETED" : "CONFIRMED",
       },
     });
 
@@ -727,7 +727,7 @@ export async function reconcilePaymentStatus(bookingId: string): Promise<{
 
         await tx.booking.update({
           where: { id: bookingId },
-          data: { status: "CONFIRMED" },
+          data: { status: payment.booking.status === "COMPLETED" ? "COMPLETED" : "CONFIRMED" },
         });
 
         await tx.paymentAudit.create({

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:seed": "npx tsx scripts/seed-admin.ts"
+    "db:seed": "npx tsx --env-file=.env scripts/seed-admin.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",

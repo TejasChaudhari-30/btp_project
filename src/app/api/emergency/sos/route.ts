@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendEmergencyEmail, sendEmergencySms } from "@/lib/notifications";
+import crypto from "crypto";
+import { buildPublicTrackingUrl } from "@/lib/appUrl";
 
 export async function POST(req: Request) {
   try {
@@ -105,6 +107,29 @@ export async function POST(req: Request) {
       },
     });
 
+    // Generate a secure public trip tracking token for the emergency contact
+    let trackingUrl: string | null = null;
+    try {
+      const shareToken = crypto.randomBytes(24).toString("hex");
+      const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48h validity for emergency contact
+      await prisma.tripShareToken.create({
+        data: {
+          token: shareToken,
+          rideId: ride.id,
+          userId: dbUser.id,
+          bookingId: booking.id,
+          recipientName: dbUser.emergencyContactName || "Emergency Contact",
+          recipientPhone: dbUser.emergencyContactPhone || null,
+          expiresAt,
+        },
+      });
+
+      const trackingResult = buildPublicTrackingUrl(shareToken);
+      trackingUrl = trackingResult.url || null;
+    } catch (tokenErr) {
+      console.warn("[SOS] Failed to create dedicated share token, falling back to default ride URL:", tokenErr);
+    }
+
     // Attempt emergency email notification
     const emailResult = await sendEmergencyEmail({
       passengerName: dbUser.name,
@@ -121,6 +146,7 @@ export async function POST(req: Request) {
       latitude: emergencyAlert.latitude,
       longitude: emergencyAlert.longitude,
       accuracy: parsedAccuracy,
+      trackingUrl,
     });
 
     // Attempt emergency SMS notification structure

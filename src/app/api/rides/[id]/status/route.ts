@@ -23,7 +23,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         routeGeometry: true,
         routeUpdatedAt: true,
         bookings: {
-          where: { status: "CONFIRMED" },
+          where: { status: { in: ["CONFIRMED", "COMPLETED"] } },
           select: {
             id: true,
             userId: true,
@@ -113,17 +113,19 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
     // Build driver view of all passenger payment statuses
     const passengerPayments = ride.bookings.map((b) => {
+      const individualRideStatus = b.status === "COMPLETED" ? "COMPLETED" : ride.status;
       const summary = computeBookingPaymentSummary({
         id: b.id,
         fare: b.fare,
         status: b.status,
         payment: b.payment,
-        ride: { status: ride.status, distance: ride.distance, rideType: ride.rideType },
+        ride: { status: individualRideStatus, distance: ride.distance, rideType: ride.rideType },
       });
       return {
         bookingId: b.id,
         userId: b.userId,
         passengerName: b.user.name,
+        bookingStatus: b.status,
         fare: b.fare,
         previousFare: b.previousFare,
         fareVersion: b.fareVersion,
@@ -140,13 +142,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       };
     });
 
+    const userIndividualRideStatus = userBooking?.status === "COMPLETED" ? "COMPLETED" : ride.status;
     const userPayment = userBooking
       ? computeBookingPaymentSummary({
           id: userBooking.id,
           fare: userBooking.fare,
           status: userBooking.status,
           payment: userBooking.payment,
-          ride: { status: ride.status, distance: ride.distance, rideType: ride.rideType },
+          ride: { status: userIndividualRideStatus, distance: ride.distance, rideType: ride.rideType },
         })
       : null;
 
@@ -159,6 +162,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         distance: ride.distance,
         price: totalConfirmedFares > 0 ? totalConfirmedFares : ride.price,
         totalConfirmedFares,
+        userBookingStatus: userBooking?.status ?? null,
         userFare: userBooking?.fare ?? null,
         userPreviousFare: userBooking?.previousFare ?? null,
         userFareVersion: userBooking?.fareVersion ?? 1,
@@ -220,9 +224,25 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       );
     }
 
-    const updatedRide = await prisma.ride.update({
-      where: { id: params.id },
-      data: { status },
+    const updatedRide = await prisma.$transaction(async (tx) => {
+      const r = await tx.ride.update({
+        where: { id: params.id },
+        data: { status },
+      });
+
+      if (status === "COMPLETED") {
+        await tx.booking.updateMany({
+          where: {
+            rideId: params.id,
+            status: "CONFIRMED",
+          },
+          data: {
+            status: "COMPLETED",
+          },
+        });
+      }
+
+      return r;
     });
 
     return NextResponse.json(updatedRide, { status: 200 });

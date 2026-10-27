@@ -522,7 +522,20 @@ export default function RouteMapClient({
 
     const fetchRoute = async (s: Location, e: Location) => {
       try {
-        const routeLocations = shouldRouteViaTalegaonStation(s, e, s.name, e.name)
+        const sName = (s.name || "").toLowerCase();
+        const eName = (e.name || "").toLowerCase();
+        const isGodavariStart = sName.includes("godav") || (Math.abs(s.lat - 18.7159) < 0.01 && Math.abs(s.lon - 73.6697) < 0.01);
+        const isIiitEnd = eName.includes("iiit") || (Math.abs(e.lat - 18.7659) < 0.01 && Math.abs(e.lon - 73.6848) < 0.01);
+        const isGodavariEnd = eName.includes("godav") || (Math.abs(e.lat - 18.7159) < 0.01 && Math.abs(e.lon - 73.6697) < 0.01);
+        const isIiitStart = sName.includes("iiit") || (Math.abs(s.lat - 18.7659) < 0.01 && Math.abs(s.lon - 73.6848) < 0.01);
+
+        const routeLocations = ((isGodavariStart && isIiitEnd) || (isIiitStart && isGodavariEnd))
+          ? [
+              { lat: s.lat, lon: s.lon },
+              { lat: 18.7280, lon: 73.6750 },
+              { lat: e.lat, lon: e.lon },
+            ]
+          : shouldRouteViaTalegaonStation(s, e, s.name, e.name)
           ? [
               { lat: s.lat, lon: s.lon },
               { lat: TALEGAON_STATION_COORDS.lat, lon: TALEGAON_STATION_COORDS.lon },

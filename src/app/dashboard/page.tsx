@@ -233,7 +233,7 @@ export default async function Dashboard() {
                                     ? "bg-sky-600 text-white"
                                     : booking.payment?.status === "FAILED"
                                     ? "bg-rose-600 text-white"
-                                    : booking.ride.status === "COMPLETED"
+                                    : (booking.ride.status === "COMPLETED" || booking.status === "COMPLETED")
                                     ? "bg-rose-600 text-white animate-pulse"
                                     : "bg-muted text-muted-foreground"
                                 }`}
@@ -242,7 +242,7 @@ export default async function Dashboard() {
                                   ? `✓ PAID (₹${pPaid.toFixed(2)})` 
                                   : isPartiallyPaid 
                                   ? `PARTIAL (Paid ₹${pPaid.toFixed(0)} / Due ₹${pBal.toFixed(0)})` 
-                                  : booking.ride.status === "COMPLETED"
+                                  : (booking.ride.status === "COMPLETED" || booking.status === "COMPLETED")
                                   ? `DUE: ₹${pBal.toFixed(2)}`
                                   : `DUE AT DEST (₹${pBal.toFixed(2)})`}
                               </Badge>

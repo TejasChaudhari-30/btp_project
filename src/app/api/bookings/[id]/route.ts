@@ -14,9 +14,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     }
 
     const body = await req.json();
-    const { action } = body; // "CONFIRM", "REJECT", "CANCEL"
+    const { action } = body; // "CONFIRM", "REJECT", "CANCEL", "DROP_OFF", "COMPLETE"
 
-    if (!["CONFIRM", "REJECT", "CANCEL"].includes(action)) {
+    if (!["CONFIRM", "REJECT", "CANCEL", "DROP_OFF", "COMPLETE"].includes(action)) {
       return NextResponse.json({ message: "Invalid action" }, { status: 400 });
     }
 
@@ -35,6 +35,30 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     const isDriver = booking.ride.driverId === user.id && (user.userType === "DRIVER" || user.userType === "BOTH");
     const isPassenger = booking.userId === user.id && (user.userType === "PASSENGER" || user.userType === "BOTH");
+
+    if (action === "DROP_OFF" || action === "COMPLETE") {
+      if (!isDriver) {
+        return NextResponse.json({ message: "Only the authorized driver can drop off a passenger" }, { status: 403 });
+      }
+
+      if (booking.status !== "CONFIRMED") {
+        return NextResponse.json({ message: "Only confirmed bookings can be completed/dropped off" }, { status: 400 });
+      }
+
+      const updated = await prisma.$transaction(async (tx) => {
+        const b = await tx.booking.update({
+          where: { id: booking.id },
+          data: { status: "COMPLETED" },
+        });
+        await tx.ride.update({
+          where: { id: booking.rideId },
+          data: { seats: { increment: booking.seats } },
+        });
+        return b;
+      });
+
+      return NextResponse.json(updated);
+    }
 
     if (action === "CONFIRM" || action === "REJECT") {
       if (!isDriver) {

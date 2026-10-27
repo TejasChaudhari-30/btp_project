@@ -20,7 +20,20 @@ export async function fetchDirectRoute(
   endName?: string
 ): Promise<[number, number][]> {
   try {
-    const locations = shouldRouteViaTalegaonStation(start, end, startName, endName)
+    const sName = (startName || "").toLowerCase();
+    const eName = (endName || "").toLowerCase();
+    const isGodavariStart = sName.includes("godav") || (Math.abs(start.lat - 18.7159) < 0.01 && Math.abs(start.lon - 73.6697) < 0.01);
+    const isIiitEnd = eName.includes("iiit") || (Math.abs(end.lat - 18.7659) < 0.01 && Math.abs(end.lon - 73.6848) < 0.01);
+    const isGodavariEnd = eName.includes("godav") || (Math.abs(end.lat - 18.7159) < 0.01 && Math.abs(end.lon - 73.6697) < 0.01);
+    const isIiitStart = sName.includes("iiit") || (Math.abs(start.lat - 18.7659) < 0.01 && Math.abs(start.lon - 73.6848) < 0.01);
+
+    const locations = ((isGodavariStart && isIiitEnd) || (isIiitStart && isGodavariEnd))
+      ? [
+          { lat: start.lat, lon: start.lon },
+          { lat: 18.7280, lon: 73.6750 },
+          { lat: end.lat, lon: end.lon },
+        ]
+      : shouldRouteViaTalegaonStation(start, end, startName, endName)
       ? [
           { lat: start.lat, lon: start.lon },
           { lat: TALEGAON_STATION_COORDS.lat, lon: TALEGAON_STATION_COORDS.lon },

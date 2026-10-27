@@ -33,8 +33,8 @@ export const TALEGAON_LANDMARKS: LocalLandmark[] = [
   {
     id: "shop-zudio-talegaon",
     name: "Zudio, The Pinnacle",
-    lat: 18.7213,
-    lon: 73.6685,
+    lat: 18.720245,
+    lon: 73.669306,
     category: "shopping",
     subtitle: "Star Bazaar, The Pinnacle, Tukaram Nagar, Talegaon Dabhade",
     aliases: [
@@ -389,6 +389,19 @@ export const TALEGAON_LANDMARKS: LocalLandmark[] = [
   // ==========================================
   // 5. EDUCATION & INSTITUTIONS
   // ==========================================
+  {
+    id: "lmk-godavari-boys-hostel",
+    name: "Godavari Boys Hostel",
+    lat: 18.715920620049204,
+    lon: 73.66975003915614,
+    category: "landmark",
+    subtitle: "Talegaon Dabhade",
+    aliases: [
+      "godavari boys hostel", "godavri boys hostel", "godavari", "godavri",
+      "godavari hostel", "godavri hostel", "godawari hostel", "godawari",
+      "boys hostel", "hostel", "iiit hostel", "iiit boys hostel"
+    ],
+  },
   {
     id: "edu-iiit-pune",
     name: "IIIT Pune (Indian Institute of Information Technology)",

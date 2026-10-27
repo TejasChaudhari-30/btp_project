@@ -33,7 +33,7 @@ export default function SearchForm() {
     <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4">
       <div className="flex-1">
         <LocationInput
-          placeholder="Leaving from (e.g. IIIT Pune)"
+          placeholder="Leaving from (e.g. Godavari Boys Hostel)"
           value={origin}
           onChange={(val) => { setOrigin(val); setOriginLoc(null); }}
           onSelect={(loc) => { setOrigin(loc.name); setOriginLoc(loc); }}

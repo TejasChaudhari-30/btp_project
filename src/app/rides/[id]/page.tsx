@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import BookingButton from "@/components/BookingButton";
@@ -19,6 +20,7 @@ import ReportUserModal from "@/components/ReportUserModal";
 import BlockUserModal from "@/components/BlockUserModal";
 import ShareTripModal from "@/components/ShareTripModal";
 import PassengerTripPaymentCard from "@/components/PassengerTripPaymentCard";
+import DropOffPassengerButton from "@/components/DropOffPassengerButton";
 
 export default async function RideDetails({ 
   params,
@@ -49,7 +51,23 @@ export default async function RideDetails({
   });
 
   if (!ride) {
-    notFound();
+    return (
+      <div className="max-w-xl mx-auto py-16 px-4 text-center space-y-6">
+        <div className="p-8 border rounded-2xl bg-card shadow-sm space-y-4">
+          <div className="text-4xl">🚗</div>
+          <h1 className="text-2xl font-bold text-foreground">Ride Not Found</h1>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            This ride link is either expired, already completed, or does not exist in the database.
+          </p>
+          <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
+            <BackButton />
+            <Button asChild>
+              <Link href="/">Browse Available Rides</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const existingRatings = await prisma.rating.findMany({
@@ -91,12 +109,12 @@ export default async function RideDetails({
   }
 
   const isDriver = user?.id === ride.driverId;
-  const isPassenger = user?.id ? ride.bookings.some(b => b.userId === user?.id && (b.status === "PENDING" || b.status === "CONFIRMED")) : false;
+  const isPassenger = user?.id ? ride.bookings.some(b => b.userId === user?.id && (b.status === "PENDING" || b.status === "CONFIRMED" || b.status === "COMPLETED")) : false;
   const canSeeChat = isDriver || isPassenger;
 
   const myBooking = user?.id
     ? ride.bookings.find(
-        (b) => b.userId === user.id && (b.status === "PENDING" || b.status === "CONFIRMED")
+        (b) => b.userId === user.id && (b.status === "PENDING" || b.status === "CONFIRMED" || b.status === "COMPLETED")
       )
     : null;
 
@@ -171,13 +189,13 @@ export default async function RideDetails({
       return s;
     });
 
-  const passengerRatingForDriver = isPassenger && ride.status === "COMPLETED" 
+  const passengerRatingForDriver = isPassenger && (ride.status === "COMPLETED" || myBooking?.status === "COMPLETED")
     ? existingRatings.find(r => r.reviewerId === user?.id && r.revieweeId === ride.driver.id)
     : null;
 
-  const confirmedPassengersForDriver = isDriver && ride.status === "COMPLETED"
-    ? ride.bookings
-        .filter(b => b.status === "CONFIRMED")
+  const completedOrConfirmedPassengers = ride.bookings.filter(b => b.status === "CONFIRMED" || b.status === "COMPLETED");
+  const confirmedPassengersForDriver = isDriver && (ride.status === "COMPLETED" || completedOrConfirmedPassengers.some(b => b.status === "COMPLETED"))
+    ? completedOrConfirmedPassengers
         .map(b => {
           const existing = existingRatings.find(r => r.reviewerId === user?.id && r.revieweeId === b.user.id);
           return {
@@ -259,7 +277,7 @@ export default async function RideDetails({
             </div>
           )}
 
-          {isPassenger && ride.status === "ACTIVE" && (
+          {isPassenger && ride.status === "ACTIVE" && myBooking?.status !== "COMPLETED" && (
             <div className="bg-card border-2 border-emerald-500/50 p-6 rounded-xl space-y-4 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
                 <div>
@@ -344,36 +362,37 @@ export default async function RideDetails({
                   </div>
                 )}
 
-                {isDriver && ride.bookings.some((b) => b.status === "CONFIRMED" || b.status === "PENDING") && (
+                {isDriver && ride.bookings.some((b) => b.status === "CONFIRMED" || b.status === "PENDING" || b.status === "COMPLETED") && (
                   <div className="pt-3 border-t space-y-2">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Passengers
                     </h4>
                     <div className="space-y-1.5">
                       {ride.bookings
-                        .filter((b) => b.status === "CONFIRMED" || b.status === "PENDING")
+                        .filter((b) => b.status === "CONFIRMED" || b.status === "PENDING" || b.status === "COMPLETED")
                         .map((b) => {
                           const pPaid = b.payment?.amountPaid ?? (b.payment?.status === "SUCCEEDED" ? b.payment?.amount : 0);
                           const pBal = b.payment?.outstandingBalance ?? (b.payment?.status === "SUCCEEDED" ? 0 : b.fare);
                           const isFullyPaid = pBal === 0 && pPaid > 0;
                           const isPartiallyPaid = pPaid > 0 && pBal > 0;
+                          const isPassengerCompleted = b.status === "COMPLETED";
 
                           return (
                             <div key={b.id} className="flex flex-col gap-1.5 text-xs bg-background p-2.5 rounded-lg border">
                               <div className="flex items-center justify-between">
                                 <span className="font-semibold text-foreground">{b.user.name}</span>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 flex-wrap justify-end">
                                   <Badge variant="outline" className="text-[10px] px-1 py-0">
                                     {b.status}
                                   </Badge>
-                                  {b.status === "CONFIRMED" && (
+                                  {(b.status === "CONFIRMED" || isPassengerCompleted) && (
                                     <Badge 
                                       className={`text-[9px] px-1.5 py-0 ${
                                         isFullyPaid 
                                           ? "bg-emerald-600 hover:bg-emerald-600 text-white font-semibold" 
                                           : isPartiallyPaid 
                                           ? "bg-amber-600 hover:bg-amber-600 text-white font-semibold" 
-                                          : ride.status === "COMPLETED" 
+                                          : (ride.status === "COMPLETED" || isPassengerCompleted)
                                           ? "bg-rose-600 hover:bg-rose-600 text-white font-bold animate-pulse" 
                                           : "bg-muted text-muted-foreground"
                                       }`}
@@ -382,9 +401,14 @@ export default async function RideDetails({
                                         ? "✓ Paid" 
                                         : isPartiallyPaid 
                                         ? `Partially Paid (Bal: ₹${pBal.toFixed(0)})` 
-                                        : ride.status === "COMPLETED"
+                                        : (ride.status === "COMPLETED" || isPassengerCompleted)
                                         ? "Payment Due"
                                         : "Due At Dest"}
+                                    </Badge>
+                                  )}
+                                  {isPassengerCompleted && (
+                                    <Badge className="bg-blue-600 hover:bg-blue-600 text-white text-[9px] px-1.5 py-0">
+                                      🏁 Reached
                                     </Badge>
                                   )}
                                 </div>
@@ -398,17 +422,23 @@ export default async function RideDetails({
                                     </span>
                                   )}
                                 </div>
-                                {b.status === "CONFIRMED" && (
+                                {(b.status === "CONFIRMED" || isPassengerCompleted) && (
                                   <span>Paid: <strong className={pPaid > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}>₹{pPaid.toFixed(2)}</strong></span>
                                 )}
                               </div>
-                              {b.status === "CONFIRMED" ? (
+                              {b.status === "CONFIRMED" || isPassengerCompleted ? (
                                 <div className="text-[11px] font-mono text-muted-foreground bg-muted/40 px-2 py-1 rounded">
                                   {b.user.phoneNumber ? `📞 ${b.user.phoneNumber}` : "No phone provided"}
                                 </div>
                               ) : (
                                 <div className="text-[10px] text-muted-foreground italic">
                                   Phone visible once confirmed
+                                </div>
+                              )}
+                              {isDriver && ride.status === "ACTIVE" && b.status === "CONFIRMED" && (
+                                <div className="pt-1 flex items-center justify-between border-t mt-1">
+                                  <span className="text-[10px] text-muted-foreground">Arrived at drop-off?</span>
+                                  <DropOffPassengerButton bookingId={b.id} passengerName={b.user.name} />
                                 </div>
                               )}
                               <div className="flex items-center gap-1.5 pt-1">
@@ -464,7 +494,7 @@ export default async function RideDetails({
               {myBooking ? (
                 <PassengerTripPaymentCard
                   rideId={ride.id}
-                  rideStatus={ride.status}
+                  rideStatus={myBooking.status === "COMPLETED" ? "COMPLETED" : ride.status}
                   bookingId={myBooking.id}
                   fare={myBooking.fare}
                   previousFare={myBooking.previousFare}
@@ -502,7 +532,7 @@ export default async function RideDetails({
             )}
           </div>
 
-          {isPassenger && ride.status === "COMPLETED" && (
+          {isPassenger && (ride.status === "COMPLETED" || myBooking?.status === "COMPLETED") && (
             <div className="pt-6 border-t space-y-4">
               <h3 className="text-lg font-bold">Rate your Driver ({ride.driver.name})</h3>
               <RatingForm 
@@ -514,7 +544,7 @@ export default async function RideDetails({
             </div>
           )}
 
-          {isDriver && ride.status === "COMPLETED" && (
+          {isDriver && (ride.status === "COMPLETED" || confirmedPassengersForDriver.length > 0) && (
             <div className="pt-6 border-t space-y-4">
               <h3 className="text-lg font-bold">Rate Passengers</h3>
               <DriverPassengerRatings 

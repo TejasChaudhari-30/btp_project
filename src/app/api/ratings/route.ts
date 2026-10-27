@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       where: { id: rideId },
       include: {
         bookings: {
-          where: { status: "CONFIRMED" },
+          where: { status: { in: ["CONFIRMED", "COMPLETED"] } },
         },
       },
     });
@@ -60,15 +60,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Ride not found" }, { status: 404 });
     }
 
-    // 3. Verify ride status is COMPLETED
-    if (ride.status !== "COMPLETED") {
-      return NextResponse.json(
-        { message: "Ratings can only be submitted for completed rides" },
-        { status: 400 }
-      );
-    }
-
-    // 4. Participation & Authorization checks
+    // 3. Participation & Authorization checks
     const isDriverReviewer = ride.driverId === userId;
     const isPassengerReviewer = ride.bookings.some((b) => b.userId === userId);
 
@@ -76,6 +68,15 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { message: "Forbidden: You did not participate in this ride" },
         { status: 403 }
+      );
+    }
+
+    // 4. Verify ride status is COMPLETED or passenger trip is COMPLETED
+    const targetBooking = ride.bookings.find((b) => b.userId === (isPassengerReviewer ? userId : revieweeId));
+    if (ride.status !== "COMPLETED" && targetBooking?.status !== "COMPLETED") {
+      return NextResponse.json(
+        { message: "Ratings can only be submitted for completed rides or passengers who have completed their trip" },
+        { status: 400 }
       );
     }
 

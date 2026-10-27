@@ -55,8 +55,9 @@ export default function PassengerWindowSync({ rideId, currentStatus }: Passenger
           }
           lastConfirmedCountRef.current = data.confirmedCount ?? 0;
 
-          // Track passenger payment and fare changes in real-time
+          // Track passenger payment, booking status, and fare changes in real-time
           const currentPaymentHash = JSON.stringify({
+            bookingStatus: data.userBookingStatus,
             userPayment: data.userPayment?.status,
             userFare: data.userFare,
             userVersion: data.userFareVersion,

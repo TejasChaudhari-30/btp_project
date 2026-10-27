@@ -157,11 +157,18 @@ export function shouldRouteViaTalegaonStation(
   const sName = (startName || start.name || "").toLowerCase();
   const eName = (endName || end.name || "").toLowerCase();
 
-  const isZudioStart = sName.includes("zudio") || haversineDistance(start.lat, start.lon, 18.7213, 73.6685) <= 1.0;
+  const isGodavariStart = sName.includes("godavari") || sName.includes("godavri") || haversineDistance(start.lat, start.lon, 18.71592, 73.66975) <= 0.3;
+  const isGodavariEnd = eName.includes("godavari") || eName.includes("godavri") || haversineDistance(end.lat, end.lon, 18.71592, 73.66975) <= 0.3;
+
+  if (isGodavariStart || isGodavariEnd) {
+    return false;
+  }
+
+  const isZudioStart = sName.includes("zudio") || haversineDistance(start.lat, start.lon, 18.720245, 73.669306) <= 1.0;
   const isIiitEnd = eName.includes("iiit") || haversineDistance(end.lat, end.lon, 18.7659, 73.6848) <= 1.0;
 
   const isIiitStart = sName.includes("iiit") || haversineDistance(start.lat, start.lon, 18.7659, 73.6848) <= 1.0;
-  const isZudioEnd = eName.includes("zudio") || haversineDistance(end.lat, end.lon, 18.7213, 73.6685) <= 1.0;
+  const isZudioEnd = eName.includes("zudio") || haversineDistance(end.lat, end.lon, 18.720245, 73.669306) <= 1.0;
 
   if ((isZudioStart && isIiitEnd) || (isIiitStart && isZudioEnd)) {
     const sDistStn = haversineDistance(start.lat, start.lon, TALEGAON_STATION_COORDS.lat, TALEGAON_STATION_COORDS.lon);
