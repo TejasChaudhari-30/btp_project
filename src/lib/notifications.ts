@@ -66,8 +66,11 @@ export async function sendEmergencyEmail(payload: EmergencyNotificationPayload):
   }
 
   const { origin } = getPublicAppOrigin();
-  const baseUrl = origin || process.env.NEXTAUTH_URL || "http://localhost:3001";
-  const trackingUrl = payload.trackingUrl || `${baseUrl}/rides/${payload.rideId}`;
+const baseUrl =
+  origin || process.env.NEXTAUTH_URL || "http://localhost:3000";
+
+const trackingUrl =
+  payload.trackingUrl || `${baseUrl}/rides/${payload.rideId}`;
 
   const hasValidCoordinates = (
     payload.latitude != null &&
@@ -88,10 +91,12 @@ export async function sendEmergencyEmail(payload: EmergencyNotificationPayload):
     ? `https://maps.google.com/?q=${payload.latitude},${payload.longitude}`
     : null;
 
-  const locationText = hasValidCoordinates
-    ? `Live Coordinates: ${payload.latitude!.toFixed(6)}, ${payload.longitude!.toFixed(6)}${accuracyNote}
-Google Maps Link: ${googleMapsUrl}`
-    : `Live Coordinates: Unavailable (Device GPS was not accessible when SOS was triggered)`;
+ const locationText = hasValidCoordinates
+  ? `Live Coordinates: ${payload.latitude!.toFixed(6)}, ${payload.longitude!.toFixed(6)}${accuracyNote}
+Google Maps Link: ${googleMapsUrl}
+Live Trip Tracking: ${trackingUrl}`
+  : `Live Coordinates: Unavailable (Device GPS was not accessible when SOS was triggered)
+Live Trip Tracking: ${trackingUrl}`;
 
   const subject = `🚨 EMERGENCY ALERT: ${payload.passengerName} activated SOS on TPool`;
   const textContent = `🚨 TPool Emergency Alert 🚨
